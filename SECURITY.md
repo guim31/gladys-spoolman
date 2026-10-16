@@ -30,6 +30,15 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- The Spoolman address and, behind a reverse proxy, a user name, a password and
+  an extra header (a token). They live in the Gladys configuration, are sent
+  only to that address, and never appear in the logs.
+- Nothing is written to `/data`.
+- Network: HTTP(S) and WebSocket requests to the configured Spoolman address
+  only, from the bridged network of the container.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and Spoolman and the proxies the integration talks to.

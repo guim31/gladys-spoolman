@@ -1,0 +1,37 @@
+{
+  "id": 1,
+  "registered": "2026-10-16T08:38:36Z",
+  "first_used": "2026-10-16T08:38:45Z",
+  "last_used": "2026-10-16T08:45:59Z",
+  "filament": {
+    "id": 1,
+    "registered": "2026-10-16T08:38:36Z",
+    "name": "Galaxy Black",
+    "vendor": {
+      "id": 1,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "Prusament",
+      "empty_spool_weight": 193.0,
+      "extra": {}
+    },
+    "material": "PLA",
+    "density": 1.24,
+    "diameter": 1.75,
+    "weight": 1000.0,
+    "spool_weight": 193.0,
+    "color_hex": "000000",
+    "extra": {},
+    "tags": []
+  },
+  "remaining_weight": 784.5,
+  "initial_weight": 1000.0,
+  "spool_weight": 193.0,
+  "used_weight": 215.5,
+  "remaining_length": 263029.9994324517,
+  "used_length": 72253.61998431273,
+  "location": "Atelier",
+  "lot_nr": "L123",
+  "archived": false,
+  "extra": {},
+  "tags": []
+}

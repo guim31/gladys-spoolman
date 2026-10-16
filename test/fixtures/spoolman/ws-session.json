@@ -1,0 +1,175 @@
+[
+  {
+    "type": "added",
+    "resource": "spool",
+    "date": "2026-10-16T08:46:13.433641Z",
+    "payload": {
+      "id": 5,
+      "registered": "2026-10-16T08:46:13Z",
+      "filament": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "PETG+",
+        "vendor": {
+          "id": 2,
+          "registered": "2026-10-16T08:38:36Z",
+          "name": "eSUN",
+          "extra": {}
+        },
+        "material": "PETG",
+        "density": 1.27,
+        "diameter": 1.75,
+        "weight": 1000,
+        "color_hex": "FF0000",
+        "extra": {},
+        "tags": []
+      },
+      "remaining_weight": 1000,
+      "initial_weight": 1000,
+      "used_weight": 0,
+      "remaining_length": 327363.5339187306,
+      "used_length": 0,
+      "location": "Shelf",
+      "archived": false,
+      "extra": {},
+      "tags": []
+    }
+  },
+  {
+    "type": "updated",
+    "resource": "spool",
+    "date": "2026-10-16T08:46:13.497191Z",
+    "payload": {
+      "id": 5,
+      "registered": "2026-10-16T08:46:13Z",
+      "first_used": "2026-10-16T08:46:13Z",
+      "last_used": "2026-10-16T08:46:13Z",
+      "filament": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "PETG+",
+        "vendor": {
+          "id": 2,
+          "registered": "2026-10-16T08:38:36Z",
+          "name": "eSUN",
+          "extra": {}
+        },
+        "material": "PETG",
+        "density": 1.27,
+        "diameter": 1.75,
+        "weight": 1000,
+        "color_hex": "FF0000",
+        "extra": {},
+        "tags": []
+      },
+      "remaining_weight": 980,
+      "initial_weight": 1000,
+      "used_weight": 20,
+      "remaining_length": 320816.26324035594,
+      "used_length": 6547.2706783746125,
+      "location": "Shelf",
+      "archived": false,
+      "extra": {},
+      "tags": []
+    }
+  },
+  {
+    "type": "updated",
+    "resource": "spool",
+    "date": "2026-10-16T08:46:13.531875Z",
+    "payload": {
+      "id": 5,
+      "registered": "2026-10-16T08:46:13Z",
+      "first_used": "2026-10-16T08:46:13Z",
+      "last_used": "2026-10-16T08:46:13Z",
+      "filament": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "PETG+",
+        "vendor": {
+          "id": 2,
+          "registered": "2026-10-16T08:38:36Z",
+          "name": "eSUN",
+          "extra": {}
+        },
+        "material": "PETG",
+        "density": 1.27,
+        "diameter": 1.75,
+        "weight": 1000,
+        "color_hex": "FF0000",
+        "extra": {},
+        "tags": []
+      },
+      "remaining_weight": 980,
+      "initial_weight": 1000,
+      "used_weight": 20,
+      "remaining_length": 320816.26324035594,
+      "used_length": 6547.2706783746125,
+      "location": "Shelf",
+      "archived": true,
+      "extra": {},
+      "tags": []
+    }
+  },
+  {
+    "type": "deleted",
+    "resource": "spool",
+    "date": "2026-10-16T08:46:13.569442Z",
+    "payload": {
+      "id": 5,
+      "registered": "2026-10-16T08:46:13Z",
+      "first_used": "2026-10-16T08:46:13Z",
+      "last_used": "2026-10-16T08:46:13Z",
+      "filament": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "PETG+",
+        "vendor": {
+          "id": 2,
+          "registered": "2026-10-16T08:38:36Z",
+          "name": "eSUN",
+          "extra": {}
+        },
+        "material": "PETG",
+        "density": 1.27,
+        "diameter": 1.75,
+        "weight": 1000,
+        "color_hex": "FF0000",
+        "extra": {},
+        "tags": []
+      },
+      "remaining_weight": 980,
+      "initial_weight": 1000,
+      "used_weight": 20,
+      "remaining_length": 320816.26324035594,
+      "used_length": 6547.2706783746125,
+      "location": "Shelf",
+      "archived": true,
+      "extra": {},
+      "tags": []
+    }
+  },
+  {
+    "type": "updated",
+    "resource": "filament",
+    "date": "2026-10-16T08:46:13.611966Z",
+    "payload": {
+      "id": 2,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "PETG+ Red",
+      "vendor": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "eSUN",
+        "extra": {}
+      },
+      "material": "PETG",
+      "density": 1.27,
+      "diameter": 1.75,
+      "weight": 1000,
+      "color_hex": "FF0000",
+      "extra": {},
+      "tags": []
+    }
+  }
+]
