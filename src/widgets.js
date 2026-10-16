@@ -50,6 +50,19 @@ export const TEXT = {
 };
 
 const pick = (table, language) => table[language] ?? table.en;
+
+// The core cuts a select option label at 40 characters.
+const OPTION_LABEL_MAX = 40;
+
+/** The name cut to `max`, keeping its ` #12` suffix (two spools of a filament differ by it). */
+export function shortName(spool, max) {
+  const suffix = ` #${spool.id}`;
+  if (spool.name.length <= max) {
+    return spool.name;
+  }
+  const base = spool.name.endsWith(suffix) ? spool.name.slice(0, -suffix.length) : spool.name;
+  return `${base.slice(0, max - suffix.length).trimEnd()}${suffix}`;
+}
 const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /** The settings, normalized. */
@@ -123,11 +136,11 @@ export function buildContent(hub, { settings: raw, language = 'en' } = {}) {
       required: true,
       label: TEXT.spool,
       default: String(spools[0].id),
-      options: spools.slice(0, MAX_OPTIONS).map((s) => ({
-        value: String(s.id),
+      options: spools.slice(0, MAX_OPTIONS).map((s) => {
         // A brand and a colour name: the same in every language.
-        label: { en: s.name, fr: s.name, de: s.name, es: s.name },
-      })),
+        const label = shortName(s, OPTION_LABEL_MAX);
+        return { value: String(s.id), label: { en: label, fr: label, de: label, es: label } };
+      }),
     },
     {
       key: 'amount',
@@ -173,7 +186,7 @@ export function buildContent(hub, { settings: raw, language = 'en' } = {}) {
         type: 'card-list',
         display: 'list',
         items: spools.slice(0, MAX_ITEMS).map((spool) => {
-          const item = { title: spool.name.slice(0, 60) };
+          const item = { title: shortName(spool, 60) };
           const sub = subtitle(spool, language);
           if (sub) {
             item.subtitle = sub;

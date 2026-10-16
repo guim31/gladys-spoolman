@@ -15,6 +15,8 @@ export const FAST_TIMINGS = {
   widgetGap: 0,
   reconnectMin: 10,
   reconnectMax: 50,
+  ownUseGrace: 100,
+  requestTimeout: 200,
 };
 
 export async function createWorld({

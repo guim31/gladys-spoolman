@@ -85,6 +85,10 @@ export function createSpoolman({ spools = SPOOLS, base = BASE, auth = null } = {
     override: null,
     requests: [],
     socketsOpened: 0,
+    // A promise holding every answer of GET /spool (answered with the data
+    // of the moment it was asked).
+    listGate: null,
+    hangUse: false,
 
     authorized(headers) {
       return !auth || headers.Authorization === auth;
@@ -113,10 +117,12 @@ export function createSpoolman({ spools = SPOOLS, base = BASE, auth = null } = {
       }
       if (path === '/api/v1/spool') {
         const all = target.searchParams.get('allow_archived') === 'true';
-        return json(
-          200,
-          server.spools.filter((s) => all || !s.archived),
-        );
+        // Snapshotted when the request arrives, like a real server.
+        const snapshot = structuredClone(server.spools.filter((s) => all || !s.archived));
+        if (server.listGate) {
+          await server.listGate;
+        }
+        return json(200, snapshot);
       }
       const use = path.match(/^\/api\/v1\/spool\/(\d+)\/use$/);
       if (use && init.method === 'PUT') {
@@ -126,6 +132,12 @@ export function createSpoolman({ spools = SPOOLS, base = BASE, auth = null } = {
         }
         const body = JSON.parse(init.body);
         const updated = server.consume(id, body.use_weight, body.use_length);
+        if (server.hangUse) {
+          // Applied, but the answer never comes: the client gives up.
+          await new Promise((resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(init.signal.reason));
+          });
+        }
         return json(200, updated);
       }
       return json(404, { detail: 'Not Found' });

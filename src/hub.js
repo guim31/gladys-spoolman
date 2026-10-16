@@ -25,6 +25,7 @@ import { SpoolmanClient, SpoolmanError } from './spoolman/client.js';
 import { LiveFeed } from './spoolman/live.js';
 import { parseSpool, stockByMaterial } from './spoolman/model.js';
 import {
+  STATUS_LABELS,
   STATUS_TEXT,
   TEST_TEXT,
   USED_TEXT,
@@ -50,9 +51,13 @@ export const DEFAULT_TIMINGS = {
   widgetGap: 10_500,
   // An unchanged value is sent again before Gladys calls it stale (48 h).
   heartbeat: 6 * 3_600_000,
+  // A consumption that timed out may still land: its echo is ours that long.
+  ownUseGrace: 30_000,
+  requestTimeout: 10_000,
 };
 
-export const USE_LIMITS = { grams: 5_000, meters: 2_000 };
+// One bound for both units: the forms declare a single `max`.
+export const USE_LIMITS = { grams: 5_000, meters: 5_000 };
 export const USE_UNITS = Object.keys(USE_LIMITS);
 
 /** An Error carrying a coded, multi-language message. */
@@ -94,6 +99,12 @@ export class Hub {
     this.usage = new Map();
     // id -> number of our own consumptions in flight (never an event: no loop)
     this.ownUse = new Map();
+    // id -> sequence of the last live message or own consumption: a REST
+    // answer older than that must not overwrite the spool (it would count a
+    // consumption twice, or archive it twice).
+    this.touched = new Map();
+    this.touchSeq = 0;
+    this.configuring = Promise.resolve();
     this.refreshTimer = null;
     this.debounceTimer = null;
     this.refreshing = null;
@@ -112,7 +123,14 @@ export class Hub {
     await this.reconfigure(config);
   }
 
-  async reconfigure(config) {
+  /** One configuration change at a time: a second one waits for the first. */
+  reconfigure(config) {
+    const run = this.configuring.then(() => this.#reconfigure(config));
+    this.configuring = run.catch(() => {});
+    return run;
+  }
+
+  async #reconfigure(config) {
     const previous = this.config;
     this.config = config;
     const linkChanged =
@@ -125,11 +143,15 @@ export class Hub {
       this.loaded = false;
       this.version = null;
       this.failure = null;
+      this.announced = false;
+      this.liveSeen = false;
+      this.touched.clear();
       if (config.url) {
         this.client = new SpoolmanClient({
           url: config.url,
           headers: config.headers,
           fetch: this.fetch,
+          timeout: this.timings.requestTimeout,
         });
         this.live = new LiveFeed({
           url: config.url,
@@ -142,8 +164,11 @@ export class Hub {
         this.live.on('message', (message) => this.#onMessage(message));
         this.refreshTimer = setInterval(() => this.refresh(), this.timings.refreshInterval);
         this.refreshTimer.unref?.();
+        const live = this.live;
         await this.refresh();
-        this.live.start();
+        if (this.live === live) {
+          live.start();
+        }
       } else {
         await this.publishDevices();
       }
@@ -166,6 +191,8 @@ export class Hub {
   }
 
   #stopLink() {
+    // A print that just ended still gets its event.
+    const fired = [...this.usage.keys()].map((id) => this.#flushUsage(id));
     this.live?.stop();
     this.live = null;
     this.client = null;
@@ -173,16 +200,19 @@ export class Hub {
     clearTimeout(this.debounceTimer);
     this.refreshTimer = null;
     this.debounceTimer = null;
-    for (const entry of this.usage.values()) {
-      clearTimeout(entry.timer);
-    }
-    this.usage.clear();
+    return Promise.all(fired);
   }
 
-  stop() {
+  async stop() {
+    const fired = this.#stopLink();
     this.stopped = true;
-    this.#stopLink();
     clearTimeout(this.widgetTimer);
+    await fired;
+  }
+
+  #touch(id) {
+    this.touchSeq += 1;
+    this.touched.set(id, this.touchSeq);
   }
 
   // --- Reading Spoolman ---------------------------------------------------
@@ -210,10 +240,12 @@ export class Hub {
       return;
     }
     let list;
+    let mark;
     try {
       if (!this.version) {
         this.version = (await client.info()).version;
       }
+      mark = this.touchSeq;
       list = await client.spools();
     } catch (err) {
       if (client !== this.client) {
@@ -228,20 +260,29 @@ export class Hub {
     }
     const parsed = list.map(parseSpool).filter(Boolean);
     const firstLoad = !this.loaded;
+    const fresher = (id) => (this.touched.get(id) ?? 0) > mark;
     const seen = new Set();
     for (const spool of parsed) {
       seen.add(spool.id);
-      this.#apply(spool, { silent: firstLoad });
+      if (!fresher(spool.id)) {
+        this.#apply(spool, { silent: firstLoad });
+      }
     }
     for (const id of [...this.spools.keys()]) {
-      if (!seen.has(id)) {
+      if (!seen.has(id) && !fresher(id)) {
         this.#remove(id);
       }
     }
     this.loaded = true;
+    const wasFailing = this.failure !== null;
     this.#recover(parsed.length);
+    if (wasFailing) {
+      // Spoolman came back: the socket may be a dead one that never closed.
+      this.live?.restart();
+    }
     await this.publishDevices();
     await this.publishStates();
+    await this.#publishGone(seen);
     await this.updateConnectionStatus();
     this.refreshWidget();
   }
@@ -277,7 +318,29 @@ export class Hub {
     }
     this.liveSeen = true;
     // Catch up with what changed while the feed was down.
-    this.refresh();
+    this.#scheduleRefresh();
+  }
+
+  /**
+   * Created spool devices Spoolman no longer has (deleted while the
+   * integration was not running, for instance): "Deleted in Spoolman".
+   */
+  async #publishGone(seen) {
+    const prefix = this.gladys.externalId(`${SPOOL_TYPE}:`);
+    const label = (STATUS_LABELS[this.language] ?? STATUS_LABELS.en).deleted;
+    const states = [];
+    for (const device of this.gladys.devices ?? []) {
+      const id = device.external_id?.startsWith(prefix)
+        ? Number(device.external_id.slice(prefix.length))
+        : NaN;
+      if (Number.isInteger(id) && !seen.has(id) && !this.spools.has(id)) {
+        states.push({
+          device_feature_external_id: spoolIds(this.gladys, id).feature('status'),
+          text: label,
+        });
+      }
+    }
+    await this.#publish(states);
   }
 
   async #onMessage({ type, resource, payload }) {
@@ -292,6 +355,9 @@ export class Hub {
     if (!this.loaded) {
       this.#scheduleRefresh();
       return;
+    }
+    if (Number.isInteger(payload.id)) {
+      this.#touch(payload.id);
     }
     if (type === 'deleted') {
       if (Number.isInteger(payload.id) && this.spools.has(payload.id)) {
@@ -342,8 +408,8 @@ export class Hub {
 
   #remove(id) {
     const spool = this.spools.get(id);
-    this.spools.delete(id);
     this.#flushUsage(id);
+    this.spools.delete(id);
     if (spool && this.#isCreated(spoolIds(this.gladys, id).device)) {
       logger.info(
         `Spool ${id} was deleted in Spoolman; its Gladys device stays until you delete it`,
@@ -372,7 +438,7 @@ export class Hub {
     this.usage.delete(id);
     const spool = this.spools.get(id);
     if (!spool || this.stopped) {
-      return;
+      return Promise.resolve();
     }
     const data = {
       ...this.#eventBase(spool),
@@ -381,7 +447,7 @@ export class Hub {
       remaining_percent: spool.percent === null ? null : Math.round(spool.percent),
     };
     logger.debug(`Spool ${id}: ${data.used_grams} g used`);
-    this.#fire(TRIGGERS.used, data);
+    return this.#fire(TRIGGERS.used, data);
   }
 
   #fireArchived(spool) {
@@ -629,7 +695,7 @@ export class Hub {
     }
     const value = typeof amount === 'string' ? Number(amount.replace(',', '.')) : amount;
     const max = USE_LIMITS[unit];
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > max) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1 || value > max) {
       throw new CommandError('amount', this.language, max);
     }
     if (!this.client) {
@@ -638,6 +704,7 @@ export class Hub {
     const client = this.client;
     this.ownUse.set(spool.id, (this.ownUse.get(spool.id) ?? 0) + 1);
     let updated;
+    let timedOut = false;
     try {
       updated = parseSpool(
         await client.use(
@@ -647,23 +714,32 @@ export class Hub {
       );
     } catch (err) {
       logger.warn(`Spool ${spool.id}: consumption refused (${err.message})`);
+      const kind = err instanceof SpoolmanError ? err.kind : 'refused';
+      timedOut = kind === 'timeout';
       throw new CommandError(
-        err instanceof SpoolmanError && ['unreachable', 'timeout'].includes(err.kind)
-          ? 'unreachable'
-          : 'refused',
+        timedOut ? 'timeout' : kind === 'unreachable' ? 'unreachable' : 'refused',
         this.language,
       );
     } finally {
-      const left = (this.ownUse.get(spool.id) ?? 1) - 1;
-      if (left > 0) {
-        this.ownUse.set(spool.id, left);
+      const release = () => {
+        const left = (this.ownUse.get(spool.id) ?? 1) - 1;
+        if (left > 0) {
+          this.ownUse.set(spool.id, left);
+        } else {
+          this.ownUse.delete(spool.id);
+        }
+      };
+      if (timedOut) {
+        // Spoolman may still apply it: its late echo is not a print.
+        setTimeout(release, this.timings.ownUseGrace).unref?.();
       } else {
-        this.ownUse.delete(spool.id);
+        release();
       }
     }
     const current = updated ?? spool;
     if (updated && client === this.client) {
       // Our own consumption: the baseline moves without an event.
+      this.#touch(updated.id);
       this.spools.set(updated.id, updated);
       await this.publishStates();
       this.refreshWidget();
@@ -700,6 +776,8 @@ export class Hub {
       const spools = (await this.client.spools()).map(parseSpool).filter(Boolean);
       const count = spools.filter((s) => !s.archived).length;
       const live = this.live?.open === true;
+      // Clears a failure status the regular refresh has not cleared yet.
+      await this.refresh();
       return table((t) => [t.ok(version, count), live ? t.live : t.noLive].join('\n'));
     } catch (err) {
       this.#fail(err);

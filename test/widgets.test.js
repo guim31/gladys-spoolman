@@ -88,3 +88,11 @@ test('before Spoolman answers: a waiting text', async (t) => {
   assert.deepEqual(validateWidgetContent(content), []);
   assert.match(content.components[0].text, /En attente de Spoolman/);
 });
+
+test('long names keep their spool number in the form and the list', async () => {
+  const { shortName } = await import('../src/widgets.js');
+  const spool = { id: 12, name: 'Polymaker PolyTerra Charcoal Black PLA #12' };
+  assert.equal(shortName(spool, 40), 'Polymaker PolyTerra Charcoal Black P #12');
+  assert.equal(shortName(spool, 40).length, 40);
+  assert.equal(shortName({ id: 1, name: 'eSUN PLA #1' }, 40), 'eSUN PLA #1');
+});

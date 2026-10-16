@@ -155,7 +155,8 @@ test('a consumption is refused with a clear message', async (t) => {
     [{ device: spoolDevice(2), amount: 5, unit: 'grams' }, /archived/],
     [{ device: spoolDevice(99), amount: 5, unit: 'grams' }, /Unknown spool/],
     [{ device: spoolDevice(1), amount: 0, unit: 'grams' }, /between 1 and 5000/],
-    [{ device: spoolDevice(1), amount: 2500, unit: 'meters' }, /between 1 and 2000/],
+    [{ device: spoolDevice(1), amount: 6000, unit: 'meters' }, /between 1 and 5000/],
+    [{ device: spoolDevice(1), amount: 0.5, unit: 'grams' }, /between 1 and 5000/],
     [{ device: spoolDevice(1), amount: -5, unit: 'grams' }, /between 1 and 5000/],
     [{ device: spoolDevice(1), amount: 5, unit: 'kg' }, /grams or metres/],
   ];
@@ -309,4 +310,107 @@ test('a new language renames the discovered features; a Gladys restart re-sends 
   await gladys.connect();
   await settle(40);
   assert.ok(fake.states.length > count, 'states published again after the reconnection');
+});
+
+/** Hold the answers of GET /spool until release() (each one with the data of its asking). */
+function holdList(server) {
+  let release;
+  server.listGate = new Promise((resolve) => {
+    release = resolve;
+  });
+  return () => {
+    server.listGate = null;
+    release();
+  };
+}
+
+test('an old REST answer never overwrites newer live data (no double count, no loop)', async (t) => {
+  const { fake, app, server, hub } = await createWorld();
+  t.after(() => app.stop());
+  await createAll(fake);
+  // A refresh asked now, answered after a print, an own use and an archive.
+  const release = holdList(server);
+  const stale = hub.refresh();
+  await settle();
+  server.consume(1, 5);
+  await settle();
+  server.consume(1, 5);
+  await settle();
+  const ack = await fake.sceneAction('use_filament', {
+    device: spoolDevice(3),
+    amount: 12,
+    unit: 'grams',
+  });
+  assert.equal(ack.success, true, ack.error);
+  server.archive(4);
+  await settle();
+  release();
+  await stale;
+  await settle();
+  assert.equal(hub.spools.get(1).usedWeight, server.spool(1).used_weight);
+  assert.equal(hub.spools.get(4).archived, true);
+  assert.ok(!ids(fake).includes(spoolDevice(4)), 'the archived spool does not come back');
+  // A fresh refresh finds nothing new to count.
+  await hub.refresh();
+  await wait(60);
+  const used = fake.sceneEvents.filter((e) => e.key === 'filament_used');
+  assert.deepEqual(
+    used.map((e) => [e.data.device, e.data.used_grams]),
+    [[spoolDevice(1), 10]],
+  );
+  assert.equal(fake.sceneEvents.filter((e) => e.key === 'spool_archived').length, 1);
+});
+
+test('the address changes during the first read: no crash, the new link only', async (t) => {
+  const server = createSpoolman();
+  const release = holdList(server);
+  const { fake, app, hub, gladys } = await createWorld({ server, connect: false });
+  t.after(() => app.stop());
+  const connecting = gladys.connect();
+  await settle();
+  const cleared = fake.configUpdated({});
+  release();
+  await connecting;
+  await cleared;
+  await settle();
+  assert.equal(hub.live, null);
+  assert.equal(server.sockets.size, 0);
+  assert.match(fake.connectionStatus.message.en, /Enter the address/);
+});
+
+test('a consumption that times out says it may be recorded, and its echo fires nothing', async (t) => {
+  const { fake, app, server } = await createWorld({ config: { url: HOST, language: 'en' } });
+  t.after(() => app.stop());
+  await createAll(fake);
+  server.hangUse = true;
+  const ack = await fake.sceneAction('use_filament', {
+    device: spoolDevice(1),
+    amount: 7,
+    unit: 'grams',
+  });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /may be recorded/);
+  await wait(60);
+  assert.deepEqual(fake.sceneEvents, []);
+});
+
+test('a spool deleted while the integration was off shows "Deleted in Spoolman"', async (t) => {
+  const { fake, app } = await createWorld({
+    devices: [{ external_id: spoolDevice(42), name: 'Old spool', features: [] }],
+  });
+  t.after(() => app.stop());
+  assert.equal(fake.lastState(spoolFeature(42, 'status')), 'Supprimée de Spoolman');
+});
+
+test('a print ending just before the spool is deleted still gets its event', async (t) => {
+  const { fake, app, server } = await createWorld();
+  t.after(() => app.stop());
+  server.consume(3, 4);
+  await settle();
+  server.remove(3);
+  await settle();
+  assert.deepEqual(
+    fake.sceneEvents.map((e) => [e.key, e.data.used_grams]),
+    [['filament_used', 4]],
+  );
 });

@@ -146,6 +146,7 @@ export const COMMAND_ERRORS = {
     amount: (max) => `Enter an amount between 1 and ${max}.`,
     unit: 'Choose grams or metres.',
     unreachable: 'Spoolman does not answer: nothing was recorded.',
+    timeout: 'Spoolman did not answer in time: the use may be recorded, check Spoolman.',
     refused: 'Spoolman refused the consumption.',
   },
   fr: {
@@ -154,6 +155,7 @@ export const COMMAND_ERRORS = {
     amount: (max) => `Saisissez une quantité entre 1 et ${max}.`,
     unit: 'Choisissez grammes ou mètres.',
     unreachable: "Spoolman ne répond pas : rien n'a été enregistré.",
+    timeout: 'Spoolman a tardé : la consommation a pu être enregistrée, vérifiez Spoolman.',
     refused: 'Spoolman a refusé la consommation.',
   },
   de: {
@@ -162,6 +164,7 @@ export const COMMAND_ERRORS = {
     amount: (max) => `Gib eine Menge zwischen 1 und ${max} ein.`,
     unit: 'Wähle Gramm oder Meter.',
     unreachable: 'Spoolman antwortet nicht: nichts wurde erfasst.',
+    timeout: 'Spoolman hat zu spät geantwortet: vielleicht erfasst, prüfe Spoolman.',
     refused: 'Spoolman hat den Verbrauch abgelehnt.',
   },
   es: {
@@ -170,6 +173,7 @@ export const COMMAND_ERRORS = {
     amount: (max) => `Introduzca una cantidad entre 1 y ${max}.`,
     unit: 'Elija gramos o metros.',
     unreachable: 'Spoolman no responde: no se ha registrado nada.',
+    timeout: 'Spoolman tardó en responder: puede haberse registrado, compruebe Spoolman.',
     refused: 'Spoolman rechazó el consumo.',
   },
 };

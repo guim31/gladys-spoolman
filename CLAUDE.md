@@ -268,3 +268,9 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
   boucle de scène) : `ownUse` gèle la ligne de base pendant l'appel.
 - Le formulaire du widget (`fields` d'un bouton) exige Gladys **5.2.0** ; les `label` des options d'un `select`
   y sont des objets multilingues obligatoires (`validateWidgetContent` le signale).
+- **Une réponse REST est une photo du moment de la demande** : appliquée après des messages WebSocket ou une
+  consommation de l'intégration, elle ramenait l'ancienne ligne de base (consommation comptée deux fois, archive
+  signalée deux fois). Chaque bobine porte le numéro du dernier message ou de la dernière consommation propre
+  (`touched`) ; une relecture plus ancienne ne la touche pas. Test : « an old REST answer never overwrites… ».
+- Un `PUT /use` en délai dépassé peut quand même être appliqué : message « a pu être enregistrée », et l'écho
+  reste « à nous » 30 s (`ownUseGrace`).

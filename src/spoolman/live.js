@@ -18,6 +18,9 @@ import { EventEmitter } from 'node:events';
 export const DEFAULT_LIVE_TIMINGS = {
   reconnectMin: 2_000,
   reconnectMax: 60_000,
+  // The backoff resets only once a socket has stayed open that long (a proxy
+  // closing idle sockets would otherwise mean a reconnection every 2 s).
+  stableAfter: 60_000,
 };
 
 export function socketUrl(baseUrl) {
@@ -47,6 +50,7 @@ export class LiveFeed extends EventEmitter {
     this.open = false;
     this.failures = 0;
     this.retryTimer = null;
+    this.stableTimer = null;
   }
 
   start() {
@@ -88,8 +92,12 @@ export class LiveFeed extends EventEmitter {
       if (this.socket !== socket) {
         return;
       }
-      this.failures = 0;
       this.open = true;
+      clearTimeout(this.stableTimer);
+      this.stableTimer = setTimeout(() => {
+        this.failures = 0;
+      }, this.timings.stableAfter);
+      this.stableTimer.unref?.();
       this.emit('open');
     };
     socket.onmessage = (event) => {
@@ -133,6 +141,7 @@ export class LiveFeed extends EventEmitter {
     const socket = this.socket;
     this.socket = null;
     this.open = false;
+    clearTimeout(this.stableTimer);
     if (socket) {
       socket.onopen = null;
       socket.onmessage = null;
