@@ -1,0 +1,125 @@
+[
+  {
+    "id": 1,
+    "registered": "2026-10-16T08:38:36Z",
+    "first_used": "2026-10-16T08:38:45Z",
+    "last_used": "2026-10-16T08:45:59Z",
+    "filament": {
+      "id": 1,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "Galaxy Black",
+      "vendor": {
+        "id": 1,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "Prusament",
+        "empty_spool_weight": 193.0,
+        "extra": {}
+      },
+      "material": "PLA",
+      "density": 1.24,
+      "diameter": 1.75,
+      "weight": 1000.0,
+      "spool_weight": 193.0,
+      "color_hex": "000000",
+      "extra": {},
+      "tags": []
+    },
+    "remaining_weight": 784.5,
+    "initial_weight": 1000.0,
+    "spool_weight": 193.0,
+    "used_weight": 215.5,
+    "remaining_length": 263029.9994324517,
+    "used_length": 72253.61998431273,
+    "location": "Atelier",
+    "lot_nr": "L123",
+    "archived": false,
+    "extra": {},
+    "tags": []
+  },
+  {
+    "id": 2,
+    "registered": "2026-10-16T08:38:36Z",
+    "first_used": "2026-10-16T08:39:01Z",
+    "last_used": "2026-10-16T08:39:01Z",
+    "filament": {
+      "id": 2,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "PETG+ Red",
+      "vendor": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "eSUN",
+        "extra": {}
+      },
+      "material": "PETG",
+      "density": 1.27,
+      "diameter": 1.75,
+      "weight": 1000.0,
+      "color_hex": "FF0000",
+      "extra": {},
+      "tags": []
+    },
+    "remaining_weight": 1000.0,
+    "initial_weight": 1000.0,
+    "used_weight": 0.0,
+    "remaining_length": 327363.5339187306,
+    "used_length": 0.0,
+    "archived": true,
+    "extra": {},
+    "tags": []
+  },
+  {
+    "id": 3,
+    "registered": "2026-10-16T08:38:36Z",
+    "first_used": "2026-10-16T08:39:01Z",
+    "last_used": "2026-10-16T08:39:01Z",
+    "filament": {
+      "id": 3,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "Generic TPU",
+      "material": "TPU",
+      "density": 1.21,
+      "diameter": 1.75,
+      "multi_color_hexes": "FF0000,00FF00",
+      "multi_color_direction": "coaxial",
+      "extra": {},
+      "tags": []
+    },
+    "used_weight": 55.0,
+    "used_length": 18897.804003490357,
+    "archived": false,
+    "extra": {},
+    "tags": []
+  },
+  {
+    "id": 4,
+    "registered": "2026-10-16T08:45:55Z",
+    "filament": {
+      "id": 2,
+      "registered": "2026-10-16T08:38:36Z",
+      "name": "PETG+ Red",
+      "vendor": {
+        "id": 2,
+        "registered": "2026-10-16T08:38:36Z",
+        "name": "eSUN",
+        "extra": {}
+      },
+      "material": "PETG",
+      "density": 1.27,
+      "diameter": 1.75,
+      "weight": 1000.0,
+      "color_hex": "FF0000",
+      "extra": {},
+      "tags": []
+    },
+    "remaining_weight": 1000.0,
+    "initial_weight": 1000.0,
+    "used_weight": 0.0,
+    "remaining_length": 327363.5339187306,
+    "used_length": 0.0,
+    "location": "Shelf",
+    "archived": false,
+    "extra": {},
+    "tags": []
+  }
+]

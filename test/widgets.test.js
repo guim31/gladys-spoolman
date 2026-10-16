@@ -1,77 +1,90 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
-import { normalizeConfig } from '../src/config.js';
+import { createSpoolman, SPOOLS, settle } from './helpers/fakeSpoolman.js';
+import { createWorld, spoolDevice } from './helpers/world.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
+const get = async (fake, settings = {}, language = 'en') => {
+  const ack = await fake.widgetGet('spools', { settings, language });
+  assert.equal(ack.success, true, ack.error);
+  return ack.data.content ?? ack.data;
+};
 
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
-
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
-});
-
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
-  try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
-    );
-  } finally {
-    simulateLanSession(true);
-  }
-});
-
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
+test('the widget fits the core vocabulary and budget, emptiest spool first', async (t) => {
+  const { fake, app } = await createWorld();
+  t.after(() => app.stop());
+  const content = await get(fake);
+  assert.deepEqual(validateWidgetContent(content), []);
+  const types = content.components.map((c) => c.type);
+  assert.deepEqual(types, ['value', 'value', 'value', 'card-list', 'button']);
+  const [stock, count, low, list, button] = content.components;
+  assert.equal(stock.unit, 'kg');
+  assert.equal(count.value, 3);
+  assert.equal(low.value, 0);
+  assert.equal(list.items[0].title, 'Prusament Galaxy Black PLA #1', 'lowest percentage first');
+  assert.equal(list.items.at(-1).title, 'Generic TPU #3', 'unknown percentage last');
+  assert.equal(list.items[0].badge.color, 'success');
+  // The form lists the spools in use, never the archived one.
+  const spoolField = button.action.fields.find((f) => f.key === 'spool');
+  assert.deepEqual(
+    spoolField.options.map((o) => o.value),
+    ['1', '4', '3'],
   );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
 });
 
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
+test('filters and the low threshold', async (t) => {
+  const spools = structuredClone(SPOOLS);
+  spools[0].remaining_weight = 80; // 8 %
+  const { fake, app } = await createWorld({ server: createSpoolman({ spools }) });
+  t.after(() => app.stop());
+  const pla = await get(fake, { material: 'pla', low_threshold: 20 });
+  assert.equal(pla.components[1].value, 1);
+  assert.equal(pla.components[2].value, 1);
+  assert.equal(pla.components[2].color, 'warning');
+  assert.equal(pla.components[3].items[0].badge.color, 'danger');
+  const shelf = await get(fake, { location: 'shelf' });
+  assert.deepEqual(
+    shelf.components[3].items.map((i) => i.title),
+    ['eSUN PETG+ Red #4'],
+  );
+  const none = await get(fake, { material: 'ASA' }, 'de');
+  assert.deepEqual(validateWidgetContent(none), []);
+  assert.match(none.components[0].text, /Keine Spule/);
+});
+
+test('the "Log usage" form records a consumption and answers a toast', async (t) => {
+  const { fake, app, server } = await createWorld();
+  t.after(() => app.stop());
+  const before = server.spool(4).remaining_weight;
+  const ack = await fake.widgetAction(
+    'spools',
+    'use',
+    {},
+    {
       settings: {},
-      config,
-    });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
-  }
-});
-
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
+      values: { spool: '4', amount: 25, unit: 'grams' },
+    },
   );
+  assert.equal(ack.success, true, ack.error);
+  await settle();
+  assert.equal(server.spool(4).remaining_weight, before - 25);
+  const toast = ack.data.message ?? ack.data;
+  assert.match(toast.en, /^25 g recorded on eSUN PETG\+ Red #4, 975 g left\.$/);
+  assert.ok(app.hub.spools.get(4).remainingWeight === before - 25);
+  // Without its form (Gladys older than 5.2.0): refused, nothing recorded.
+  const old = await fake.widgetAction('spools', 'use', {}, { settings: {} });
+  assert.equal(old.success, false);
+  assert.equal(server.spool(4).remaining_weight, before - 25);
+  assert.equal(fake.sceneEvents.length, 0);
+  assert.ok(spoolDevice(4));
 });
 
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+test('before Spoolman answers: a waiting text', async (t) => {
+  const server = createSpoolman();
+  server.goDown();
+  const { fake, app } = await createWorld({ server });
+  t.after(() => app.stop());
+  const content = await get(fake, {}, 'fr');
+  assert.deepEqual(validateWidgetContent(content), []);
+  assert.match(content.components[0].text, /En attente de Spoolman/);
 });

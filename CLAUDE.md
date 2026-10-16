@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "archiv"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+src/app.js                        registers every SDK handler on the hub (shared with the tests)
+src/hub.js                        the link to Spoolman: devices, states, events, consumption, status
+src/devices.js                    spool / material stock -> Gladys devices and states
+src/spoolman/client.js            REST API (info, spools, use), errors by kind
+src/spoolman/live.js              WebSocket feed on /api/v1/, reconnection
+src/spoolman/model.js             API spool -> plain values; stock by material
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget (manifest `widgets`)
+src/texts.js                      every text produced by the container, in four languages
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, SDK fake Gladys + fake Spoolman (test/helpers/)
+test/fixtures/spoolman/           bodies recorded on a real Spoolman 0.27.0
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +75,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, widget content, feature names, and
+  `docs/{en,fr,de,es}.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +239,32 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Spoolman (faits vérifiés sur Spoolman 0.27.0, image `ghcr.io/donkie/spoolman`, 16/10/2026)
+
+- Le conteneur écoute sur **8000** ; 7912 est le port publié par la doc Docker (défaut de l'intégration).
+- **WebSocket racine `/api/v1/`** : un message `{type: added|updated|deleted, resource, date, payload}` par
+  changement, toutes ressources. **Aucun message de vie** : un silence est normal, d'où la relecture REST de
+  secours toutes les 5 min. Un changement de **filament ou fabricant n'envoie rien pour les bobines** : relire la
+  liste (fait, avec un anti-rebond).
+- `GET /spool` cache les archivées sans `allow_archived=true`. Poids en g, longueurs en **mm**, dates UTC sans
+  millisecondes. Un filament sans poids : pas de `remaining_weight`, ni pourcentage.
+- `PUT /spool/<id>/use` accepte une quantité **négative** (rend du filament) : l'intégration n'envoie que du positif.
+- **Contrôle d'origine** (0.27) : une requête avec un en-tête `Origin` étranger reçoit 403. `fetch` et `WebSocket`
+  de Node n'en envoient pas ; ne jamais en ajouter (`parseHeader` refuse `Origin`).
+- **SQLite réutilise l'id de la dernière bobine supprimée** : une nouvelle bobine peut reprendre l'appareil Gladys.
+  Documenté, pas contourné (l'id seul reste l'identifiant, comme l'intégration HA).
+- Le `WebSocket` de Node accepte une option non standard `headers` (Basic auth du proxy) : vérifié sous Node 24.
+
+## Pièges de cette intégration
+
+- Gladys n'a **pas d'unité gramme** : poids en `counter-sensor/integer`, « (g) » dans le nom.
+- Une intégration ne peut **pas choisir la pièce** d'un appareil : l'emplacement Spoolman est un paramètre
+  (`SPOOLMAN_LOCATION`) et un filtre du widget.
+- États publiés **seulement pour les appareils ajoutés** (`gladys.devices`) : un gros stock dépasserait sinon les
+  300 états/min.
+- `filament_used` agrège les petites consommations (Moonraker en envoie toutes les quelques secondes) et part
+  après 2 min de calme ; une consommation faite par l'intégration (action, widget) ne le déclenche jamais (pas de
+  boucle de scène) : `ownUse` gèle la ligne de base pendant l'appel.
+- Le formulaire du widget (`fields` d'un bouton) exige Gladys **5.2.0** ; les `label` des options d'un `select`
+  y sont des objets multilingues obligatoires (`validateWidgetContent` le signale).

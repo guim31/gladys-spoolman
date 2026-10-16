@@ -1,0 +1,8 @@
+{
+  "version": "0.27.0",
+  "debug_mode": false,
+  "automatic_backups": true,
+  "db_type": "sqlite",
+  "git_commit": "bed3f14",
+  "build_date": "2026-09-25T13:48:24Z"
+}

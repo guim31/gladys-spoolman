@@ -1,177 +1,510 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Spoolman",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your 3D printing filament spools from Spoolman: remaining weight, low stock, usage.",
+    "fr": "Vos bobines de filament 3D suivies par Spoolman : poids restant, stock bas, consommation.",
+    "de": "Deine 3D-Filamentspulen aus Spoolman: Restgewicht, knapper Bestand, Verbrauch.",
+    "es": "Sus bobinas de filamento 3D de Spoolman: peso restante, stock bajo, consumo."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-spoolman:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-spoolman/main/cover.png",
+  "categories": ["appliances"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Connect Spoolman",
+        "fr": "Connecter Spoolman",
+        "de": "Spoolman verbinden",
+        "es": "Conectar Spoolman"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Enter the address of your Spoolman server: its IP address (port 7912 by default) or the full address behind a reverse proxy, sub-path included. Spoolman has no login of its own: fill in the proxy credentials only if your proxy asks for them.",
+        "fr": "Saisissez l'adresse de votre serveur Spoolman : son adresse IP (port 7912 par défaut) ou l'adresse complète derrière un proxy inverse, sous-chemin compris. Spoolman n'a pas d'identifiants : ne remplissez ceux du proxy que si votre proxy les demande.",
+        "de": "Gib die Adresse deines Spoolman-Servers ein: seine IP-Adresse (standardmäßig Port 7912) oder die vollständige Adresse hinter einem Reverse-Proxy, samt Unterpfad. Spoolman hat keine eigene Anmeldung: trag die Proxy-Zugangsdaten nur ein, wenn dein Proxy sie verlangt.",
+        "es": "Introduzca la dirección de su servidor Spoolman: su dirección IP (puerto 7912 por defecto) o la dirección completa detrás de un proxy inverso, subruta incluida. Spoolman no tiene inicio de sesión propio: rellene las credenciales del proxy solo si su proxy las pide."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/Donkie/Spoolman/wiki",
+          "label": {
+            "en": "Spoolman documentation",
+            "fr": "Documentation de Spoolman",
+            "de": "Spoolman-Dokumentation",
+            "es": "Documentación de Spoolman"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "Spoolman address",
+        "fr": "Adresse de Spoolman",
+        "de": "Spoolman-Adresse",
+        "es": "Dirección de Spoolman"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "placeholder": {
+        "en": "e.g. 192.168.1.50:7912",
+        "fr": "ex. 192.168.1.50:7912",
+        "de": "z. B. 192.168.1.50:7912",
+        "es": "p. ej. 192.168.1.50:7912"
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "Proxy user name (optional)",
+        "fr": "Utilisateur du proxy (facultatif)",
+        "de": "Proxy-Benutzername (optional)",
+        "es": "Usuario del proxy (opcional)"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "required": false,
+      "default": ""
     },
     {
-      "key": "unit",
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Proxy password (optional)",
+        "fr": "Mot de passe du proxy (facultatif)",
+        "de": "Proxy-Passwort (optional)",
+        "es": "Contraseña del proxy (opcional)"
+      },
+      "description": {
+        "en": "Sent as HTTP Basic authentication, with the user name above.",
+        "fr": "Envoyé en authentification HTTP Basic, avec l'utilisateur ci-dessus.",
+        "de": "Wird als HTTP-Basic-Authentifizierung gesendet, mit dem Benutzernamen oben.",
+        "es": "Se envía como autenticación HTTP Basic, con el usuario indicado arriba."
+      },
+      "required": false
+    },
+    {
+      "key": "extra_header",
+      "type": "secret",
+      "label": {
+        "en": "Extra HTTP header (optional)",
+        "fr": "En-tête HTTP supplémentaire (facultatif)",
+        "de": "Zusätzlicher HTTP-Header (optional)",
+        "es": "Cabecera HTTP adicional (opcional)"
+      },
+      "description": {
+        "en": "For a proxy that expects a token, written \"Name: value\", e.g. \"X-Api-Key: abc123\".",
+        "fr": "Pour un proxy qui attend un jeton, écrit « Nom: valeur », ex. « X-Api-Key: abc123 ».",
+        "de": "Für einen Proxy, der ein Token erwartet, als „Name: Wert“, z. B. „X-Api-Key: abc123“.",
+        "es": "Para un proxy que espera un token, escrito «Nombre: valor», p. ej. «X-Api-Key: abc123»."
+      },
+      "required": false
+    },
+    {
+      "key": "material_stock",
+      "type": "boolean",
+      "label": {
+        "en": "One stock device per material",
+        "fr": "Un appareil de stock par matériau",
+        "de": "Ein Bestandsgerät pro Material",
+        "es": "Un dispositivo de stock por material"
+      },
+      "description": {
+        "en": "Total remaining weight and number of spools of each material (PLA, PETG...).",
+        "fr": "Poids total restant et nombre de bobines de chaque matériau (PLA, PETG…).",
+        "de": "Gesamtes Restgewicht und Anzahl der Spulen je Material (PLA, PETG …).",
+        "es": "Peso total restante y número de bobinas de cada material (PLA, PETG...)."
+      },
+      "required": false,
+      "default": true
+    },
+    {
+      "key": "language",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": {
+        "en": "Language of names and messages",
+        "fr": "Langue des noms et messages",
+        "de": "Sprache der Namen und Meldungen",
+        "es": "Idioma de nombres y mensajes"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Feature names are set when a device is added to Gladys.",
+        "fr": "Les noms des fonctionnalités sont fixés à l'ajout d'un appareil dans Gladys.",
+        "de": "Die Namen der Funktionen werden beim Hinzufügen eines Geräts zu Gladys festgelegt.",
+        "es": "Los nombres de las funciones se fijan al añadir un dispositivo a Gladys."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 20
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "filament_used",
+      "label": {
+        "en": "Filament used",
+        "fr": "Filament consommé",
+        "de": "Filament verbraucht",
+        "es": "Filamento consumido"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A spool lost weight (a print reported to Spoolman), once the consumption has stopped for 2 minutes.",
+        "fr": "Une bobine a perdu du poids (une impression signalée à Spoolman), une fois la consommation arrêtée depuis 2 minutes.",
+        "de": "Eine Spule hat Gewicht verloren (ein an Spoolman gemeldeter Druck), sobald der Verbrauch 2 Minuten ruht.",
+        "es": "Una bobina ha perdido peso (una impresión comunicada a Spoolman), cuando el consumo lleva 2 minutos detenido."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "label": {
+            "en": "Spool",
+            "fr": "Bobine",
+            "de": "Spule",
+            "es": "Bobina"
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "spool",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Spool name",
+            "fr": "Nom de la bobine",
+            "de": "Name der Spule",
+            "es": "Nombre de la bobina"
+          }
+        },
+        {
+          "key": "material",
+          "type": "string",
+          "label": {
+            "en": "Material",
+            "fr": "Matériau",
+            "de": "Material",
+            "es": "Material"
+          }
+        },
+        {
+          "key": "location",
+          "type": "string",
+          "label": {
+            "en": "Location",
+            "fr": "Emplacement",
+            "de": "Lagerort",
+            "es": "Ubicación"
+          }
+        },
+        {
+          "key": "used_grams",
+          "type": "number",
+          "label": {
+            "en": "Grams used",
+            "fr": "Grammes consommés",
+            "de": "Verbrauchte Gramm",
+            "es": "Gramos consumidos"
+          }
+        },
+        {
+          "key": "remaining_grams",
+          "type": "number",
+          "label": {
+            "en": "Grams left",
+            "fr": "Grammes restants",
+            "de": "Verbleibende Gramm",
+            "es": "Gramos restantes"
+          }
+        },
+        {
+          "key": "remaining_percent",
+          "type": "number",
+          "label": {
+            "en": "Percent left",
+            "fr": "Pourcentage restant",
+            "de": "Verbleibender Prozentsatz",
+            "es": "Porcentaje restante"
+          }
+        }
+      ]
+    },
+    {
+      "key": "spool_archived",
+      "label": {
+        "en": "Spool archived",
+        "fr": "Bobine archivée",
+        "de": "Spule archiviert",
+        "es": "Bobina archivada"
+      },
+      "description": {
+        "en": "A spool was archived in Spoolman (usually: it is empty).",
+        "fr": "Une bobine a été archivée dans Spoolman (en général : elle est vide).",
+        "de": "Eine Spule wurde in Spoolman archiviert (meist: sie ist leer).",
+        "es": "Una bobina se ha archivado en Spoolman (normalmente: está vacía)."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Spool",
+            "fr": "Bobine",
+            "de": "Spule",
+            "es": "Bobina"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "spool",
+          "type": "string",
+          "label": {
+            "en": "Spool name",
+            "fr": "Nom de la bobine",
+            "de": "Name der Spule",
+            "es": "Nombre de la bobina"
+          }
+        },
+        {
+          "key": "material",
+          "type": "string",
+          "label": {
+            "en": "Material",
+            "fr": "Matériau",
+            "de": "Material",
+            "es": "Material"
+          }
+        },
+        {
+          "key": "location",
+          "type": "string",
+          "label": {
+            "en": "Location",
+            "fr": "Emplacement",
+            "de": "Lagerort",
+            "es": "Ubicación"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "use_filament",
+      "label": {
+        "en": "Record a filament use",
+        "fr": "Déclarer une consommation de filament",
+        "de": "Filamentverbrauch erfassen",
+        "es": "Registrar un consumo de filamento"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Subtract an amount from a spool in Spoolman, for a printer that does not report it.",
+        "fr": "Retire une quantité d'une bobine dans Spoolman, pour une imprimante qui ne le signale pas.",
+        "de": "Zieht eine Menge von einer Spule in Spoolman ab, für einen Drucker, der es nicht meldet.",
+        "es": "Resta una cantidad de una bobina en Spoolman, para una impresora que no lo comunica."
+      },
+      "timeout_seconds": 20,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Spool",
+            "fr": "Bobine",
+            "de": "Spule",
+            "es": "Bobina"
+          },
           "required": true
+        },
+        {
+          "key": "amount",
+          "type": "number",
+          "required": true,
+          "min": 1,
+          "max": 5000,
+          "label": {
+            "en": "Amount",
+            "fr": "Quantité",
+            "de": "Menge",
+            "es": "Cantidad"
+          }
+        },
+        {
+          "key": "unit",
+          "type": "select",
+          "required": true,
+          "default": "grams",
+          "label": {
+            "en": "Unit",
+            "fr": "Unité",
+            "de": "Einheit",
+            "es": "Unidad"
+          },
+          "options": [
+            {
+              "value": "grams",
+              "label": {
+                "en": "Grams",
+                "fr": "Grammes",
+                "de": "Gramm",
+                "es": "Gramos"
+              }
+            },
+            {
+              "value": "meters",
+              "label": {
+                "en": "Metres",
+                "fr": "Mètres",
+                "de": "Meter",
+                "es": "Metros"
+              }
+            }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "remaining_grams",
+          "type": "number",
+          "label": {
+            "en": "Grams left",
+            "fr": "Grammes restants",
+            "de": "Verbleibende Gramm",
+            "es": "Gramos restantes"
+          }
+        },
+        {
+          "key": "remaining_percent",
+          "type": "number",
+          "label": {
+            "en": "Percent left",
+            "fr": "Pourcentage restant",
+            "de": "Verbleibender Prozentsatz",
+            "es": "Porcentaje restante"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "spools",
+      "label": {
+        "en": "Filament spools",
+        "fr": "Bobines de filament",
+        "de": "Filamentspulen",
+        "es": "Bobinas de filamento"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Stock, the spools running out first, and a form to log a use.",
+        "fr": "Stock, bobines qui s'épuisent en premier et formulaire de consommation.",
+        "de": "Bestand, die zuerst leeren Spulen und ein Formular für den Verbrauch.",
+        "es": "Stock, las bobinas que se agotan antes y un formulario de consumo."
+      },
+      "icon": "disc",
+      "action_timeout_seconds": 20,
+      "settings": [
+        {
+          "key": "material",
+          "type": "string",
+          "label": {
+            "en": "Material (optional)",
+            "fr": "Matériau (facultatif)",
+            "de": "Material (optional)",
+            "es": "Material (opcional)"
+          },
+          "placeholder": {
+            "en": "e.g. PLA",
+            "fr": "ex. PLA",
+            "de": "z. B. PLA",
+            "es": "p. ej. PLA"
+          },
+          "required": false
+        },
+        {
+          "key": "location",
+          "type": "string",
+          "label": {
+            "en": "Spoolman location (optional)",
+            "fr": "Emplacement Spoolman (facultatif)",
+            "de": "Spoolman-Lagerort (optional)",
+            "es": "Ubicación en Spoolman (opcional)"
+          },
+          "required": false
+        },
+        {
+          "key": "low_threshold",
+          "type": "number",
+          "label": {
+            "en": "Low under (%)",
+            "fr": "Bas en dessous de (%)",
+            "de": "Knapp unter (%)",
+            "es": "Bajo por debajo de (%)"
+          },
+          "required": false,
+          "default": 20,
+          "min": 1,
+          "max": 99
+        }
+      ]
     }
   ]
 }
