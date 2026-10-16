@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-16
+
 ### Added
 
 - First version: Spoolman filament spools in Gladys, updated live through
@@ -25,4 +27,5 @@ the notes of the version's GitHub Release.
 - Reverse proxy support: sub-path, Basic auth, a token header.
 - English, French, German and Spanish.
 
-[Unreleased]: https://github.com/guim31/gladys-spoolman/commits/main
+[Unreleased]: https://github.com/guim31/gladys-spoolman/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-spoolman/releases/tag/v1.0.0
