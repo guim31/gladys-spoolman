@@ -135,7 +135,12 @@ export function createSpoolman({ spools = SPOOLS, base = BASE, auth = null } = {
         if (server.hangUse) {
           // Applied, but the answer never comes: the client gives up.
           await new Promise((resolve, reject) => {
-            init.signal?.addEventListener('abort', () => reject(init.signal.reason));
+            // AbortSignal.timeout() does not keep the event loop alive (Node 22).
+            const alive = setInterval(() => {}, 1000);
+            init.signal?.addEventListener('abort', () => {
+              clearInterval(alive);
+              reject(init.signal.reason);
+            });
           });
         }
         return json(200, updated);
